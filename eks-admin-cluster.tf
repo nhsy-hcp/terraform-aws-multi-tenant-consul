@@ -1,0 +1,84 @@
+module "eks_admin_cluster" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "19.0.4"
+
+  cluster_name    = var.eks_admin_cluster_name
+  cluster_version = var.eks_k8s_version
+
+  vpc_id                         = module.vpc.vpc_id
+  subnet_ids                     = module.vpc.public_subnets
+  cluster_endpoint_public_access = true
+
+  eks_managed_node_group_defaults = {
+    ami_type = "AL2_x86_64"
+  }
+
+  cluster_addons = {
+    coredns = {
+      most_recent = true
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+    vpc-cni = {
+      most_recent = true
+    }
+    aws-ebs-csi-driver = {
+      most_recent = true
+    }
+  }
+  eks_managed_node_groups = {
+    one = {
+      name = var.eks_admin_cluster_name
+
+      instance_types = [var.ec2_nodes_type]
+
+      min_size     = var.number_of_worker_nodes
+      max_size     = var.number_of_worker_nodes
+      desired_size = var.number_of_worker_nodes
+
+      key_name = var.eks_managed_node_groups_ssh_key_pair
+    }
+  }
+}
+resource "aws_security_group_rule" "eks_to_nodes_admin_cluster" {
+  description              = "From admin cluster EKS to admin cluster nodes"
+  type                     = "ingress"
+  source_security_group_id = module.eks_admin_cluster.cluster_security_group_id
+  from_port                = 1025
+  to_port                  = 10000
+  security_group_id        = module.eks_admin_cluster.node_security_group_id
+  protocol                 = "tcp"
+}
+resource "aws_security_group_rule" "admin_cluster_nodes_to_admin_cluster_nodes" {
+  description              = "From admin cluster nodes to admin nodes"
+  type                     = "ingress"
+  source_security_group_id = module.eks_admin_cluster.node_security_group_id
+  from_port                = 0
+  to_port                  = 0
+  security_group_id        = module.eks_admin_cluster.node_security_group_id
+  protocol                 = "-1"
+}
+resource "aws_security_group_rule" "user_cluster_nodes_to_admin_cluster_nodes" {
+  description              = "From user cluster nodes to admin cluster nodes"
+  type                     = "ingress"
+  source_security_group_id = module.eks_user_cluster.node_security_group_id
+  from_port                = 0
+  to_port                  = 0
+  security_group_id        = module.eks_admin_cluster.node_security_group_id
+  protocol                 = "-1"
+}
+# creates IAM role for ebs-csi-controller and assigns AmazonEBSCSIDriverPolicy policy to it
+module "ebs_csi_controller_role_eks_admin_cluster" {
+  source    = "terraform-aws-modules/iam/aws//modules/iam-eks-role"
+  role_name = "ebs-csi-controller-role-${module.eks_admin_cluster.cluster_name}"
+  cluster_service_accounts = {
+    (module.eks_admin_cluster.cluster_name) = ["kube-system:ebs-csi-controller-sa"]
+  }
+  role_policy_arns = {
+    "arn" = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  }
+  depends_on = [
+    module.eks_admin_cluster # implicit dependancy doesn't work for some reason ...
+  ]
+}
