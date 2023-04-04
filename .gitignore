@@ -1,0 +1,22 @@
+### Terraform template
+# Local .terraform directories
+**/.terraform/*
+**/.terraform.lock.hcl
+**/.terragrunt-cache/*
+
+# .tfstate files
+
+# Local dev files
+.config
+.idea
+.kube
+.ssh
+.terragrunt-cache
+
+# Terraform state
+**/terraform.tfstate.d/*
+*.tfstate
+*.tfstate.*
+
+# Terraform plan
+*.plan
