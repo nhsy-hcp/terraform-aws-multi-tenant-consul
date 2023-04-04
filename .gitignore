@@ -22,3 +22,5 @@
 *.plan
 
 .DS_Store
+consul-license.yaml*
+consul-admin-cluster.tf

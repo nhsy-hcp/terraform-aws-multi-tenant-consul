@@ -16,26 +16,30 @@ terraform apply
 ```
 ### 3) Configure the kubernetes contexts:
 ```
-aws eks --region $(terraform output -raw region) update-kubeconfig --name $(terraform output -raw cluster-a_name)
-aws eks --region $(terraform output -raw region) update-kubeconfig --name $(terraform output -raw cluster-b_name)
+aws eks --region $(terraform output -raw region) update-kubeconfig --name $(terraform output -raw eks_admin_cluster_name)
+aws eks --region $(terraform output -raw region) update-kubeconfig --name $(terraform output -raw eks_user_cluster_name)
+
+export EKS_ADMIN_CLUSTER_CONTEXT=$(terraform output -raw eks_admin_cluster_kube_context)
+export EKS_USER_CLUSTER_CONTEXT=$(terraform output -raw eks_user_cluster_kube_context)
 ```
 ### 4) Add a license into license.yaml
 
-### 5) Install Consul in cluster-a
+### 5) Install Consul in EKS admin cluster
 ```
-export CLUSTER_A_CONTEXT=arn:aws:eks:$(terraform output -raw region):$(aws sts get-caller-identity | jq -r '.["Account"]'):cluster/$(terraform output -raw cluster-a_name)
-export CLUSTER_B_CONTEXT=arn:aws:eks:$(terraform output -raw region):$(aws sts get-caller-identity | jq -r '.["Account"]'):cluster/$(terraform output -raw cluster-b_name)
-kubectl config use-context $CLUSTER_A_CONTEXT
+kubectl config use-context $EKS_ADMIN_CLUSTER_CONTEXT
 kubectl config current-context
 
-kubectl annotate serviceaccount ebs-csi-controller-sa -n kube-system eks.amazonaws.com/role-arn=$(terraform output -raw iam_ebs-csi-controller_role_cluster-a)
+# kubectl annotate serviceaccount ebs-csi-controller-sa -n kube-system eks.amazonaws.com/role-arn=$(terraform output -raw iam_ebs_csi_controller_role_eks_admin_cluster)
+kubectl annotate serviceaccount ebs-csi-controller-sa -n kube-system eks.amazonaws.com/role-arn=$(terraform output -raw ebs_csi_irsa_role_eks_admin_cluster_iam_role_arn)
 kubectl rollout restart deployment ebs-csi-controller -n kube-system
 
-kubectl create namespace consul
-kubectl apply -f license.yaml
-kubectl apply -f bootstrap-token.yaml
+kubectl apply -f k8s/consul-namespace.yaml
+kubectl apply -f k8s/consul-license.yaml
+kubectl apply -f k8s/consul-bootstrap-token.yaml
 kubectl apply --kustomize "github.com/hashicorp/consul-api-gateway/config/crd?ref=v0.5.3"
-helm install consul hashicorp/consul -n consul --values consul_values_a.yaml --version=1.1.1
+
+helm install consul hashicorp/consul -n consul --values k8s/consul-admin-values-v1.0.6.yaml --version=1.0.6
+watch -d -n3 kubectl get all -n consul 
 ```
 ### 6) Copy Secrets to cluster-b
 ```
@@ -48,7 +52,7 @@ kubectl get secret -n consul consul-gossip-encryption-key -o yaml | kubectl --co
 ```
 kubectl config use-context $CLUSTER_B_CONTEXT
 kubectl config current-context
-kubectl annotate serviceaccount ebs-csi-controller-sa -n kube-system eks.amazonaws.com/role-arn=$(terraform output -raw iam_ebs-csi-controller_role_cluster-b)
+kubectl annotate serviceaccount ebs-csi-controller-sa -n kube-system eks.amazonaws.com/role-arn=$(terraform output -raw iam_ebs_csi_controller_role_cluster-b)
 kubectl rollout restart deployment ebs-csi-controller -n kube-system
 
 kubectl apply -f license.yaml
@@ -69,7 +73,9 @@ helm install consul hashicorp/consul -n consul --values consul_values_b.yaml --v
 
 ### 10) Discovering cluster-a Consul UI URL
 ```
-echo https://$(kubectl --context $CLUSTER_A_CONTEXT get svc -n consul | grep consul-ui | awk '{print $4}')
+echo "ADMIN CLUSTER LB:" $(kubectl get svc --context $EKS_ADMIN_CLUSTER_CONTEXT -n consul consul-ui --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+echo https://$(kubectl get svc --context $EKS_ADMIN_CLUSTER_CONTEXT -n consul consul-ui --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+curl -skv https://$(kubectl get svc --context $EKS_ADMIN_CLUSTER_CONTEXT -n consul consul-ui --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 ```
 Don't forget to log in using the supplied bootstrap token
 61f69a27-028d-ad76-e4e5-b538334caf3e
@@ -108,7 +114,7 @@ kubectl config use-context $CLUSTER_B_CONTEXT
 kubectl delete -f example-echo-svc.yaml
 kubectl delete -f consul-apigw-cert.yaml 
 kubectl delete -f api-gateway.yaml
-kubectlkb delete -f httproute.yaml
+kubectlk delete -f httproute.yaml
 
 helm uninstall consul -n consul
 kubectl config use-context $CLUSTER_A_CONTEXT

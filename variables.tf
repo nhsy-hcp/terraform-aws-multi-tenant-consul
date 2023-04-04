@@ -11,11 +11,11 @@ variable "eks_k8s_version" {
 
 variable "eks_admin_cluster_name" {
   type    = string
-  default = "eks-admin-cluster"
+  default = "eks-admin"
 }
 variable "eks_user_cluster_name" {
   type    = string
-  default = "eks-user-cluster"
+  default = "eks-user"
 }
 # Managed nodes group parameters
 variable "number_of_worker_nodes" {

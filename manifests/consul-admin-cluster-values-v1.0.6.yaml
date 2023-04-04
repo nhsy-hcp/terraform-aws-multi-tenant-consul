@@ -28,7 +28,7 @@ server:
   exposeService:
     enabled: true
   exposeGossipAndRPCPorts: true
-  replicas: 1
+  replicas: 3
 
 dns:
   enabled: true

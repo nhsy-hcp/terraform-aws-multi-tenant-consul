@@ -1,0 +1,44 @@
+
+global:
+  name: "consul"
+  tls:
+    enabled: true
+    enableAutoEncrypt: true
+  adminPartitions:
+    enabled: true
+    name: "default"
+  datacenter: dc1
+  image: "hashicorp/consul-enterprise:1.15.2-ent"
+  # imageK8S: "hashicorp/consul-k8s-control-plane:1.0.6"
+  # imageConsulDataplane: "hashicorp/consul-dataplane:1.0.0"
+  enterpriseLicense:
+    secretName: "license"
+    secretKey: "key"
+
+  enableConsulNamespaces: true 
+  acls:
+    manageSystemACLs: true
+    bootstrapToken:
+      secretName: bootstrap-acl-token
+      secretKey: token
+  gossipEncryption:
+    autoGenerate: true
+
+server:
+  exposeService:
+    enabled: true
+  exposeGossipAndRPCPorts: true
+  replicas: 3
+
+dns:
+  enabled: true
+  enableRedirection: true
+
+connectInject:
+  enabled: false
+
+ui:
+  enabled: true
+  service:
+    enabled: true
+    type: LoadBalancer
