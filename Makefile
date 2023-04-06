@@ -19,6 +19,7 @@ plan: fmt init
 destroy: init
 	-@rm consul-admin-cluster.tf
 	@terraform destroy -auto-approve -target helm_release.consul_admin_cluster
+	@terraform destroy -auto-approve -target module.eks_admin_cluster
 	@terraform destroy -auto-approve
 
 fmt:
@@ -28,4 +29,4 @@ clean:
 	-rm -rf .terraform/
 	-rm .terraform.lock.hcl
 	-rm terraform.tfstate*
-	-@rm consul-admin-cluster.tf
+	-rm consul-admin-cluster.tf
