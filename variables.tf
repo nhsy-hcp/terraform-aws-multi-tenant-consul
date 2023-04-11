@@ -13,22 +13,37 @@ variable "eks_admin_cluster_name" {
   type    = string
   default = "eks-admin"
 }
+
 variable "eks_user_cluster_name" {
   type    = string
   default = "eks-user"
 }
+
 # Managed nodes group parameters
 variable "number_of_worker_nodes" {
   type    = number
   default = 3
 }
-variable "ec2_nodes_type" {
-  type    = string
-  default = "t3.small"
+
+variable "eks_admin_cluster_ec2_nodes_types" {
+  type    = list(string)
+  default = ["t3.small", "t2.small"]
 }
+
+
+variable "eks_user_cluster_ec2_nodes_types" {
+  type    = list(string)
+  default = ["t3.medium", "t2.medium"]
+}
+
+variable "ec2_nodes_capacity_type" {
+  type    = string
+  default = "ON_DEMAND"
+}
+
 variable "eks_managed_node_groups_ssh_key_pair" {
   type    = string
-  default = ""
+  default = null
 }
 
 # IAM for ebs-csi-controller

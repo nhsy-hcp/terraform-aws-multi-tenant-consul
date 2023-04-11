@@ -28,8 +28,8 @@ module "eks_user_cluster" {
       most_recent = true
     }
     aws-ebs-csi-driver = {
-      most_recent              = true
-      service_account_role_arn = module.ebs_csi_irsa_role_eks_user_cluster["enabled"].iam_role_arn
+      most_recent = true
+      #service_account_role_arn = module.ebs_csi_irsa_role_eks_user_cluster["a"].iam_role_arn
     }
   }
 
@@ -49,7 +49,8 @@ module "eks_user_cluster" {
     one = {
       name = var.eks_user_cluster_name
 
-      instance_types = [var.ec2_nodes_type]
+      instance_types = var.eks_user_cluster_ec2_nodes_types
+      capacity_type  = var.ec2_nodes_capacity_type
 
       min_size     = var.number_of_worker_nodes
       max_size     = var.number_of_worker_nodes
@@ -66,7 +67,7 @@ resource "aws_security_group_rule" "user_cluster_nodes_to_admin_cluster_nodes" {
 
   description              = "From user cluster nodes to admin cluster nodes"
   type                     = "ingress"
-  source_security_group_id = module.eks_user_cluster["enabled"].node_security_group_id
+  source_security_group_id = module.eks_user_cluster[each.key].node_security_group_id
   from_port                = 0
   to_port                  = 0
   security_group_id        = module.eks_admin_cluster.node_security_group_id
@@ -81,17 +82,19 @@ resource "aws_security_group_rule" "admin_cluster_nodes_to_user_cluster_nodes" {
   source_security_group_id = module.eks_admin_cluster.node_security_group_id
   from_port                = 0
   to_port                  = 0
-  security_group_id        = module.eks_user_cluster["enabled"].node_security_group_id
+  security_group_id        = module.eks_user_cluster[each.key].node_security_group_id
   protocol                 = "-1"
 }
 
 resource "aws_security_group_rule" "admin_cluster_nodes_to_user_cluster_eks" {
+  for_each = var.create_eks_user_cluster ? toset(["enabled"]) : toset([])
+
   description              = "From admin cluster nodes to user cluster eks"
   type                     = "ingress"
   source_security_group_id = module.eks_admin_cluster.node_security_group_id
   from_port                = 443
   to_port                  = 443
-  security_group_id        = module.eks_user_cluster["enabled"].cluster_security_group_id
+  security_group_id        = module.eks_user_cluster[each.key].cluster_security_group_id
   protocol                 = "tcp"
 }
 
@@ -102,40 +105,36 @@ module "ebs_csi_irsa_role_eks_user_cluster" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "5.16.0"
 
-  role_name             = "ebs-csi-controller-role-${module.eks_user_cluster["enabled"].cluster_name}"
+  role_name             = "ebs-csi-controller-role-${module.eks_user_cluster[each.key].cluster_name}"
   attach_ebs_csi_policy = true
 
   oidc_providers = {
     main = {
-      provider_arn               = module.eks_user_cluster["enabled"].oidc_provider_arn
+      provider_arn               = module.eks_user_cluster[each.key].oidc_provider_arn
       namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
     }
   }
-
-  #  depends_on = [
-  #    module.eks_user_cluster["enabled"]
-  #  ]
 }
 
-#resource "kubernetes_annotations" "ebs_csi_controller_sa_eks_user_cluster" {
-#  for_each = var.create_eks_user_cluster ? toset(["enabled"]) : toset([])
-#
-#  provider = kubernetes.eks_user_cluster
-#
-#  api_version = "v1"
-#  kind        = "ServiceAccount"
-#  metadata {
-#
-#    name      = "ebs-csi-controller-sa"
-#    namespace = "kube-system"
-#  }
-#
-#  annotations = {
-#    "eks.amazonaws.com/role-arn" = module.ebs_csi_irsa_role_eks_user_cluster["enabled"].iam_role_arn
-#  }
-#
-#  depends_on = [
-#    module.eks_user_cluster["enabled"].cluster_endpoint,
-#    module.eks_user_cluster["enabled"].cluster_addons
-#  ]
-#}
+resource "kubernetes_annotations" "ebs_csi_controller_sa_eks_user_cluster" {
+  for_each = var.create_eks_user_cluster ? toset(["enabled"]) : toset([])
+
+  provider = kubernetes.eks_user_cluster
+
+  api_version = "v1"
+  kind        = "ServiceAccount"
+  metadata {
+
+    name      = "ebs-csi-controller-sa"
+    namespace = "kube-system"
+  }
+
+  annotations = {
+    "eks.amazonaws.com/role-arn" = module.ebs_csi_irsa_role_eks_user_cluster[each.key].iam_role_arn
+  }
+
+  #  depends_on = [
+  #    module.eks_user_cluster[each.key].cluster_endpoint,
+  #    module.eks_user_cluster[each.key].cluster_addons
+  #  ]
+}

@@ -48,7 +48,8 @@ module "eks_admin_cluster" {
     one = {
       name = var.eks_admin_cluster_name
 
-      instance_types = [var.ec2_nodes_type]
+      instance_types = var.eks_admin_cluster_ec2_nodes_types
+      capacity_type  = var.ec2_nodes_capacity_type
 
       min_size     = var.number_of_worker_nodes
       max_size     = var.number_of_worker_nodes

@@ -19,7 +19,7 @@ deploy: init
 	#@kubectl rollout restart deployment ebs-csi-controller -n kube-system
 	@kubectl cluster-info
 	-@aws eks --region $(REGION) update-kubeconfig --name $(EKS_USER_CLUSTER_NAME)
-	#-@kubectl rollout restart deployment ebs-csi-controller -n kube-system
+	-@kubectl rollout restart deployment ebs-csi-controller -n kube-system
 	-@kubectl cluster-info
 	-@kubectl config use-context $(EKS_ADMIN_CLUSTER_CONTEXT)
 	-@kubectl config current-context

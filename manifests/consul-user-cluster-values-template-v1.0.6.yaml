@@ -23,21 +23,21 @@ global:
   acls:
     manageSystemACLs: true
     bootstrapToken:
-      secretName: bootstrap-acl-token
-      secretKey: token
+      secretName: "bootstrap-acl-token"
+      secretKey: "token"
   gossipEncryption:
     secretName: "consul-gossip-encryption-key"
     secretKey: "key"
 
 externalServers:
   enabled: true
-  hosts: ["<EKS_ADMIN_CLUSTER_CONSUL_LB>"]
-  k8sAuthMethodHost: "<EKS_USER_CLUSTER_K8S_LB>"
+  hosts: [<EKS_ADMIN_CLUSTER_CONSUL_LB>]
+  k8sAuthMethodHost: <EKS_USER_CLUSTER_K8S_LB>
   tlsServerName: "server.dc1.consul"
 
 client:
   enabled: true
-  join: ["<EKS_ADMIN_CLUSTER_CONSUL_LB>"]
+  join: [<EKS_ADMIN_CLUSTER_CONSUL_LB>]
   exposeGossipPorts: true
 
 dns:
