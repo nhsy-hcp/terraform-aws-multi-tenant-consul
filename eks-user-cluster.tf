@@ -1,94 +1,141 @@
-# module "eks_user_cluster" {
-#   source  = "terraform-aws-modules/eks/aws"
-#   version = "19.0.4"
+module "eks_user_cluster" {
+  for_each = var.create_eks_user_cluster ? toset(["enabled"]) : toset([])
 
-#   cluster_name    = var.eks_user_cluster_name
-#   cluster_version = var.eks_k8s_version
+  source  = "terraform-aws-modules/eks/aws"
+  version = "19.12.0"
 
-#   vpc_id                         = module.vpc.vpc_id
-#   subnet_ids                     = module.vpc.public_subnets
-#   cluster_endpoint_public_access = true
+  cluster_name    = var.eks_user_cluster_name
+  cluster_version = var.eks_k8s_version
 
-#   eks_managed_node_group_defaults = {
-#     ami_type = "AL2_x86_64"
-#   }
+  vpc_id                         = module.vpc.vpc_id
+  subnet_ids                     = module.vpc.public_subnets
+  cluster_endpoint_public_access = true
+  create_cluster_security_group  = true
+  create_node_security_group     = true
 
-#   cluster_addons = {
-#     coredns = {
-#       most_recent = true
-#     }
-#     kube-proxy = {
-#       most_recent = true
-#     }
-#     vpc-cni = {
-#       most_recent = true
-#     }
-#     aws-ebs-csi-driver = {
-#       most_recent = true
-#     }
-#   }
-#   eks_managed_node_groups = {
-#     one = {
-#       name = var.eks_user_cluster_name
+  eks_managed_node_group_defaults = {
+    ami_type = "AL2_x86_64"
+  }
 
-#       instance_types = [var.ec2_nodes_type]
+  cluster_addons = {
+    coredns = {
+      most_recent = true
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+    vpc-cni = {
+      most_recent = true
+    }
+    aws-ebs-csi-driver = {
+      most_recent              = true
+      service_account_role_arn = module.ebs_csi_irsa_role_eks_user_cluster["enabled"].iam_role_arn
+    }
+  }
 
-#       min_size     = var.number_of_worker_nodes
-#       max_size     = var.number_of_worker_nodes
-#       desired_size = var.number_of_worker_nodes
+  # Extend node-to-node security group rules
+  node_security_group_additional_rules = {
+    ingress_self_all = {
+      description = "Node to node all ports/protocols"
+      protocol    = "-1"
+      from_port   = 0
+      to_port     = 0
+      type        = "ingress"
+      self        = true
+    }
+  }
 
-#       key_name = var.eks_managed_node_groups_ssh_key_pair
-#     }
-#   }
-# }
-# resource "aws_security_group_rule" "eks_to_nodes_cluster-b" {
-#   description              = "From cluster-b EKS to cluster-b nodes"
-#   type                     = "ingress"
-#   source_security_group_id = module.eks_user_cluster.cluster_security_group_id
-#   from_port                = 1025
-#   to_port                  = 10000
-#   security_group_id        = module.eks_user_cluster.node_security_group_id
-#   protocol                 = "tcp"
-# }
-# resource "aws_security_group_rule" "cluster-a_nodes_to_cluster-b_nodes" {
-#   description              = "From cluster-a nodes to cluster-b nodes"
-#   type                     = "ingress"
-#   source_security_group_id = module.eks_admin_cluster.node_security_group_id
-#   from_port                = 0
-#   to_port                  = 0
-#   security_group_id        = module.eks_user_cluster.node_security_group_id
-#   protocol                 = "-1"
-# }
-# resource "aws_security_group_rule" "cluster-b_nodes_to_cluster-b_nodes" {
-#   description              = "From cluster-b nodes to cluster-b nodes"
-#   type                     = "ingress"
-#   source_security_group_id = module.eks_user_cluster.node_security_group_id
-#   from_port                = 0
-#   to_port                  = 0
-#   security_group_id        = module.eks_user_cluster.node_security_group_id
-#   protocol                 = "-1"
-# }
-# resource "aws_security_group_rule" "cluster-a_nodes_to_cluster-b_eks" {
-#   description              = "From cluster-a nodes to cluster-b eks"
-#   type                     = "ingress"
-#   source_security_group_id = module.eks_admin_cluster.node_security_group_id
-#   from_port                = 443
-#   to_port                  = 443
-#   security_group_id        = module.eks_user_cluster.cluster_security_group_id
-#   protocol                 = "tcp"
-# }
-# # creates IAM role for ebs-csi-controller and assigns AmazonEBSCSIDriverPolicy policy to it
-# module "ebs_csi_controller_role_eks_user_cluster" {
+  eks_managed_node_groups = {
+    one = {
+      name = var.eks_user_cluster_name
 
-#   source    = "terraform-aws-modules/iam/aws//modules/iam-eks-role"
-#   role_name = "ebs-csi-controller-role-${module.eks_user_cluster.cluster_name}"
-#   cluster_service_accounts = {
-#     (module.eks_user_cluster.cluster_name) = ["kube-system:ebs-csi-controller-sa"]
-#   }
-#   role_policy_arns = {
-#     "arn" = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-#   }
-#   depends_on = [
-#     module.eks_user_cluster # implicit dependancy doesn't work for some reason ...
-#   ]
-# }
+      instance_types = [var.ec2_nodes_type]
+
+      min_size     = var.number_of_worker_nodes
+      max_size     = var.number_of_worker_nodes
+      desired_size = var.number_of_worker_nodes
+
+      key_name = var.eks_managed_node_groups_ssh_key_pair
+    }
+  }
+}
+
+# Additional firewall rules for consul communications
+resource "aws_security_group_rule" "user_cluster_nodes_to_admin_cluster_nodes" {
+  for_each = var.create_eks_user_cluster ? toset(["enabled"]) : toset([])
+
+  description              = "From user cluster nodes to admin cluster nodes"
+  type                     = "ingress"
+  source_security_group_id = module.eks_user_cluster["enabled"].node_security_group_id
+  from_port                = 0
+  to_port                  = 0
+  security_group_id        = module.eks_admin_cluster.node_security_group_id
+  protocol                 = "-1"
+}
+
+resource "aws_security_group_rule" "admin_cluster_nodes_to_user_cluster_nodes" {
+  for_each = var.create_eks_user_cluster ? toset(["enabled"]) : toset([])
+
+  description              = "From admin cluster nodes to user cluster nodes"
+  type                     = "ingress"
+  source_security_group_id = module.eks_admin_cluster.node_security_group_id
+  from_port                = 0
+  to_port                  = 0
+  security_group_id        = module.eks_user_cluster["enabled"].node_security_group_id
+  protocol                 = "-1"
+}
+
+resource "aws_security_group_rule" "admin_cluster_nodes_to_user_cluster_eks" {
+  description              = "From admin cluster nodes to user cluster eks"
+  type                     = "ingress"
+  source_security_group_id = module.eks_admin_cluster.node_security_group_id
+  from_port                = 443
+  to_port                  = 443
+  security_group_id        = module.eks_user_cluster["enabled"].cluster_security_group_id
+  protocol                 = "tcp"
+}
+
+# creates IAM role for ebs-csi-controller
+module "ebs_csi_irsa_role_eks_user_cluster" {
+  for_each = var.create_eks_user_cluster ? toset(["enabled"]) : toset([])
+
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "5.16.0"
+
+  role_name             = "ebs-csi-controller-role-${module.eks_user_cluster["enabled"].cluster_name}"
+  attach_ebs_csi_policy = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks_user_cluster["enabled"].oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+
+  #  depends_on = [
+  #    module.eks_user_cluster["enabled"]
+  #  ]
+}
+
+#resource "kubernetes_annotations" "ebs_csi_controller_sa_eks_user_cluster" {
+#  for_each = var.create_eks_user_cluster ? toset(["enabled"]) : toset([])
+#
+#  provider = kubernetes.eks_user_cluster
+#
+#  api_version = "v1"
+#  kind        = "ServiceAccount"
+#  metadata {
+#
+#    name      = "ebs-csi-controller-sa"
+#    namespace = "kube-system"
+#  }
+#
+#  annotations = {
+#    "eks.amazonaws.com/role-arn" = module.ebs_csi_irsa_role_eks_user_cluster["enabled"].iam_role_arn
+#  }
+#
+#  depends_on = [
+#    module.eks_user_cluster["enabled"].cluster_endpoint,
+#    module.eks_user_cluster["enabled"].cluster_addons
+#  ]
+#}

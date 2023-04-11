@@ -4,8 +4,6 @@
 **/.terraform.lock.hcl
 **/.terragrunt-cache/*
 
-# .tfstate files
-
 # Local dev files
 .config
 .idea
@@ -21,6 +19,10 @@
 # Terraform plan
 *.plan
 
+# Terrafaor local tfvars
+terraform.tfvars
+
 .DS_Store
+*.bak
 consul-license.yaml*
 consul-admin-cluster.tf

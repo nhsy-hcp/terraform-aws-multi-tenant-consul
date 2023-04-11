@@ -1,0 +1,2 @@
+aws_account_id = "<AWS_ACCOUNT_ID>"
+owner          = "example-owner"

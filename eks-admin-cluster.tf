@@ -1,4 +1,5 @@
 module "eks_admin_cluster" {
+
   source  = "terraform-aws-modules/eks/aws"
   version = "19.12.0"
 
@@ -26,7 +27,20 @@ module "eks_admin_cluster" {
       most_recent = true
     }
     aws-ebs-csi-driver = {
-      most_recent = true
+      most_recent              = true
+      service_account_role_arn = module.ebs_csi_irsa_role_eks_admin_cluster.iam_role_arn
+    }
+  }
+
+  # Extend node-to-node security group rules
+  node_security_group_additional_rules = {
+    ingress_self_all = {
+      description = "Node to node all ports/protocols"
+      protocol    = "-1"
+      from_port   = 0
+      to_port     = 0
+      type        = "ingress"
+      self        = true
     }
   }
 
@@ -44,48 +58,6 @@ module "eks_admin_cluster" {
     }
   }
 }
-# resource "aws_security_group_rule" "eks_to_nodes_admin_cluster" {
-#   description              = "From admin cluster EKS to admin cluster nodes"
-#   type                     = "ingress"
-#   source_security_group_id = module.eks_admin_cluster.cluster_security_group_id
-#   from_port                = 1025
-#   to_port                  = 10000
-#   security_group_id        = module.eks_admin_cluster.node_security_group_id
-#   protocol                 = "tcp"
-# }
-resource "aws_security_group_rule" "admin_cluster_nodes_to_admin_cluster_nodes" {
-  description              = "From admin cluster nodes to admin nodes"
-  type                     = "ingress"
-  source_security_group_id = module.eks_admin_cluster.node_security_group_id
-  from_port                = 0
-  to_port                  = 0
-  security_group_id        = module.eks_admin_cluster.node_security_group_id
-  protocol                 = "-1"
-}
-# resource "aws_security_group_rule" "user_cluster_nodes_to_admin_cluster_nodes" {
-#   description              = "From user cluster nodes to admin cluster nodes"
-#   type                     = "ingress"
-#   source_security_group_id = module.eks_user_cluster.node_security_group_id
-#   from_port                = 0
-#   to_port                  = 0
-#   security_group_id        = module.eks_admin_cluster.node_security_group_id
-#   protocol                 = "-1"
-# }
-
-# # creates IAM role for ebs-csi-controller and assigns AmazonEBSCSIDriverPolicy policy to it
-# module "ebs_csi_controller_role_eks_admin_cluster" {
-#   source    = "terraform-aws-modules/iam/aws//modules/iam-eks-role"
-#   role_name = "ebs-csi-controller-role-${module.eks_admin_cluster.cluster_name}"
-#   cluster_service_accounts = {
-#     (module.eks_admin_cluster.cluster_name) = ["kube-system:ebs-csi-controller-sa"]
-#   }
-#   role_policy_arns = {
-#     "arn" = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-#   }
-#   depends_on = [
-#     module.eks_admin_cluster # implicit dependancy doesn't work for some reason ...
-#   ]
-# }
 
 # creates IAM role for ebs-csi-controller
 module "ebs_csi_irsa_role_eks_admin_cluster" {
@@ -102,28 +74,28 @@ module "ebs_csi_irsa_role_eks_admin_cluster" {
     }
   }
 
-  depends_on = [
-    module.eks_admin_cluster.cluster_endpoint
-  ]
+  #  depends_on = [
+  #    module.eks_admin_cluster.cluster_endpoint
+  #  ]
 }
 
-resource "kubernetes_annotations" "ebs-csi-controller-sa" {
-  provider = kubernetes.eks_admin_cluster
-
-  api_version = "v1"
-  kind        = "ServiceAccount"
-  metadata {
-
-    name      = "ebs-csi-controller-sa"
-    namespace = "kube-system"
-  }
-
-  annotations = {
-    "eks.amazonaws.com/role-arn" = module.ebs_csi_irsa_role_eks_admin_cluster.iam_role_arn
-  }
-
-  depends_on = [
-    module.eks_admin_cluster.cluster_endpoint,
-    module.eks_admin_cluster.cluster_addons
-  ]
-}
+#resource "kubernetes_annotations" "ebs-csi-controller-sa" {
+#  provider = kubernetes.eks_admin_cluster
+#
+#  api_version = "v1"
+#  kind        = "ServiceAccount"
+#  metadata {
+#
+#    name      = "ebs-csi-controller-sa"
+#    namespace = "kube-system"
+#  }
+#
+#  annotations = {
+#    "eks.amazonaws.com/role-arn" = module.ebs_csi_irsa_role_eks_admin_cluster.iam_role_arn
+#  }
+#
+#  depends_on = [
+#    module.eks_admin_cluster.cluster_endpoint,
+#    module.eks_admin_cluster.cluster_addons
+#  ]
+#}

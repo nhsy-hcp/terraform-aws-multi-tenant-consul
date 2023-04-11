@@ -44,3 +44,8 @@ variable "aws_account_id" {
 variable "owner" {
   type = string
 }
+
+variable "create_eks_user_cluster" {
+  type    = bool
+  default = true
+}

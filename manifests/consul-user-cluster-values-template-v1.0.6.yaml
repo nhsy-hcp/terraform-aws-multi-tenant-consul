@@ -1,4 +1,3 @@
-
 global:
   name: "consul"
   enabled: false
@@ -32,13 +31,13 @@ global:
 
 externalServers:
   enabled: true
-  hosts: ["<cluster-a_external_server_lb>"]
-  k8sAuthMethodHost: "<cluster-b_eks_api_endpoint>"
+  hosts: ["<EKS_ADMIN_CLUSTER_CONSUL_LB>"]
+  k8sAuthMethodHost: "<EKS_USER_CLUSTER_K8S_LB>"
   tlsServerName: "server.dc1.consul"
 
 client:
   enabled: true
-  join: ["<cluster-a_external_server_lb>"]
+  join: ["<EKS_ADMIN_CLUSTER_CONSUL_LB>"]
   exposeGossipPorts: true
 
 dns:
@@ -56,7 +55,3 @@ apiGateway:
   managedGatewayClass:
     serviceType: LoadBalancer
     useHostPorts: true
-
-
-
-
