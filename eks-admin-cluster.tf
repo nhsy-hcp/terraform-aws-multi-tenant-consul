@@ -51,9 +51,9 @@ module "eks_admin_cluster" {
       instance_types = var.eks_admin_cluster_ec2_nodes_types
       capacity_type  = var.ec2_nodes_capacity_type
 
-      min_size     = var.number_of_worker_nodes
-      max_size     = var.number_of_worker_nodes
-      desired_size = var.number_of_worker_nodes
+      min_size     = var.eks_admin_cluster_workers["min_size"]
+      max_size     = var.eks_admin_cluster_workers["max_size"]
+      desired_size = var.eks_admin_cluster_workers["desired_size"]
 
       key_name = var.eks_managed_node_groups_ssh_key_pair
     }

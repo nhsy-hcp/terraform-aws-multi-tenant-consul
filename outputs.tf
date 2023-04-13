@@ -40,27 +40,27 @@ output "eks_admin_cluster_kube_context" {
 
 output "eks_user_cluster_name" {
   description = "user cluster name"
-  value       = try(module.eks_user_cluster["enabled"].cluster_name, null)
+  value       = try(module.eks_user_cluster["this"].cluster_name, null)
 }
 
 output "eks_user_cluster_endpoint" {
   description = "user cluster EKS endpoint"
-  value       = try(module.eks_user_cluster["enabled"].cluster_endpoint, null)
+  value       = try(module.eks_user_cluster["this"].cluster_endpoint, null)
 }
 
 output "eks_cluster_security_group_id_user_cluster" {
   description = "user cluster control plane SG"
-  value       = try(module.eks_user_cluster["enabled"].cluster_security_group_id, null)
+  value       = try(module.eks_user_cluster["this"].cluster_security_group_id, null)
 }
 
 output "eks_node_security_group_id_user_cluster" {
   description = "user cluster nodes SG"
-  value       = try(module.eks_user_cluster["enabled"].node_security_group_id, null)
+  value       = try(module.eks_user_cluster["this"].node_security_group_id, null)
 }
 
 output "ebs_csi_irsa_role_eks_user_cluster_iam_role_arn" {
   description = "ebs_csi_controller_role_eks_user_cluster"
-  value       = try(module.ebs_csi_irsa_role_eks_user_cluster["enabled"].iam_role_arn, null)
+  value       = try(module.ebs_csi_irsa_role_eks_user_cluster["this"].iam_role_arn, null)
 }
 
 output "eks_user_cluster_kube_context" {

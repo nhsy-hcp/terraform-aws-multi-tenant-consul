@@ -20,9 +20,32 @@ variable "eks_user_cluster_name" {
 }
 
 # Managed nodes group parameters
-variable "number_of_worker_nodes" {
-  type    = number
-  default = 3
+variable "eks_admin_cluster_workers" {
+  type = object({
+    min_size     = number
+    max_size     = number
+    desired_size = number
+  })
+
+  default = {
+    min_size     = 3
+    max_size     = 3
+    desired_size = 3
+  }
+}
+
+variable "eks_user_cluster_workers" {
+  type = object({
+    min_size     = number
+    max_size     = number
+    desired_size = number
+  })
+
+  default = {
+    min_size     = 3
+    max_size     = 6
+    desired_size = 3
+  }
 }
 
 variable "eks_admin_cluster_ec2_nodes_types" {

@@ -137,3 +137,6 @@ helm uninstall consul -n consul
 kubectl delete pvc -n consul -l chart=consul-helm
 terraform destroy
 ```
+
+## TODO
+* Re-factor to 2 stage deployment
