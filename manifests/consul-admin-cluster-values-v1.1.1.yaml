@@ -1,4 +1,3 @@
-
 global:
   name: "consul"
   tls:
@@ -8,14 +7,13 @@ global:
     enabled: true
     name: "default"
   datacenter: dc1
-  image: "hashicorp/consul-enterprise:1.14.5-ent"
-  imageK8S: "hashicorp/consul-k8s-control-plane:1.0.6"
-  imageConsulDataplane: "hashicorp/consul-dataplane:1.0.0"
+  image: "hashicorp/consul-enterprise:1.15.2-ent"
+  #imageK8S: "hashicorp/consul-k8s-control-plane:1.0.6"
+  #imageConsulDataplane: "hashicorp/consul-dataplane:1.1.0"
   enterpriseLicense:
     secretName: "license"
     secretKey: "key"
-
-  enableConsulNamespaces: true 
+  enableConsulNamespaces: true
   acls:
     manageSystemACLs: true
     bootstrapToken:

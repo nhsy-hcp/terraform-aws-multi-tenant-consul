@@ -5,10 +5,12 @@ metadata:
   name: api-gateway
   namespace: consul
   annotations:
-    service.beta.kubernetes.io/aws-load-balancer-name: my-new-nlb-internal
-    service.beta.kubernetes.io/aws-load-balancer-type: external
-    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
-    service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+    service.beta.kubernetes.io/aws-load-balancer-name: "eks-user-nlb"
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    #service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+
 spec:
   gatewayClassName: consul-api-gateway
   listeners:
@@ -21,4 +23,3 @@ spec:
     tls:
       certificateRefs:
         - name: consul-apigw-cert
-        

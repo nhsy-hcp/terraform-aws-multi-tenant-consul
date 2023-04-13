@@ -1,4 +1,4 @@
-.PHONY: all init deploy plan consul consul-admin consul-user consul-clean destroy fmt clean
+.PHONY: all init deploy plan consul consul-admin consul-user consul-clean consul-admin-clean consul-user-clean destroy fmt clean
 
 EKS_ADMIN_CLUSTER_NAME=`terraform output -raw eks_admin_cluster_name`
 EKS_USER_CLUSTER_NAME=`terraform output -raw eks_user_cluster_name`
@@ -16,39 +16,35 @@ deploy: init
 	@terraform apply -auto-approve
 	@sleep 5
 	@aws eks --region $(REGION) update-kubeconfig --name $(EKS_ADMIN_CLUSTER_NAME)
-	#@kubectl rollout restart deployment ebs-csi-controller -n kube-system
 	@kubectl cluster-info
-	-@aws eks --region $(REGION) update-kubeconfig --name $(EKS_USER_CLUSTER_NAME)
-	#-@kubectl rollout restart deployment ebs-csi-controller -n kube-system
-	-@kubectl cluster-info
-	-@kubectl config use-context $(EKS_ADMIN_CLUSTER_CONTEXT)
-	-@kubectl config current-context
-	@sleep 5
-
-consul: consul-admin #consul-user
-
-consul-admin:
-	@cp consul-admin-cluster.tf.tpl consul-admin-cluster.tf
-	@terraform init
-	@terraform apply -auto-approve
+	@aws eks --region $(REGION) update-kubeconfig --name $(EKS_USER_CLUSTER_NAME)
+	@kubectl cluster-info
 	@kubectl config use-context $(EKS_ADMIN_CLUSTER_CONTEXT)
 	@kubectl config current-context
-	@kubectl wait --for=condition=ready pod --all --namespace consul --timeout=120s
-	@kubectl get all -n consul
 	@sleep 5
 
-consul-user:
-	# TODO
-	@kubectl config use-context $(EKS_USER_CLUSTER_CONTEXT)
-	@kubectl config current-context
-	@kubectl get all -n consul
+consul: consul-admin consul-user
 
-consul-clean:
+consul-admin:
+	@scripts/01-consul-admin-cluster-install.sh
+
+consul-user:
+	@scripts/02-consul-user-cluster-install.sh
+
+consul-clean: consul-user-clean consul-admin-clean
+
+consul-admin-clean:
 	-@helm uninstall --kube-context $(EKS_ADMIN_CLUSTER_CONTEXT) -n consul consul
-	-@helm uninstall --kube-context $(EKS_USER_CLUSTER_CONTEXT) -n consul consul
 	-@kubectl --context $(EKS_ADMIN_CLUSTER_CONTEXT) delete pvc -n consul -l chart=consul-helm
-	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete pvc -n consul -l chart=consul-helm
 	-@kubectl --context $(EKS_ADMIN_CLUSTER_CONTEXT) delete namespace consul
+
+consul-user-clean:
+	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete -f manifests/demo-echo-svc.yaml
+	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete -f manifests/demo-httproute.yaml
+	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete -f manifests/consul-apigw-cert.yaml
+	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete -f manifests/consul-api-gateway.yaml
+	-@helm uninstall --kube-context $(EKS_USER_CLUSTER_CONTEXT) -n consul consul
+	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete pvc -n consul -l chart=consul-helm
 	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete namespace consul
 
 plan: init
@@ -56,7 +52,6 @@ plan: init
 	@terraform plan
 
 destroy: init consul-clean
-	-@rm consul-admin-cluster.tf
 	@terraform destroy -auto-approve
 
 fmt:
@@ -66,4 +61,3 @@ clean:
 	-rm -rf .terraform/
 	-rm .terraform.lock.hcl
 	-rm terraform.tfstate*
-	-rm consul-admin-cluster.tf

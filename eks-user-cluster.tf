@@ -61,43 +61,6 @@ module "eks_user_cluster" {
   }
 }
 
-# Additional firewall rules for consul communications
-resource "aws_security_group_rule" "user_cluster_nodes_to_admin_cluster_nodes" {
-  for_each = var.create_eks_user_cluster ? toset(["this"]) : toset([])
-
-  description              = "From user cluster nodes to admin cluster nodes"
-  type                     = "ingress"
-  source_security_group_id = module.eks_user_cluster["this"].node_security_group_id
-  from_port                = 0
-  to_port                  = 0
-  security_group_id        = module.eks_admin_cluster.node_security_group_id
-  protocol                 = "-1"
-}
-
-resource "aws_security_group_rule" "admin_cluster_nodes_to_user_cluster_nodes" {
-  for_each = var.create_eks_user_cluster ? toset(["this"]) : toset([])
-
-  description              = "From admin cluster nodes to user cluster nodes"
-  type                     = "ingress"
-  source_security_group_id = module.eks_admin_cluster.node_security_group_id
-  from_port                = 0
-  to_port                  = 0
-  security_group_id        = module.eks_user_cluster["this"].node_security_group_id
-  protocol                 = "-1"
-}
-
-resource "aws_security_group_rule" "admin_cluster_nodes_to_user_cluster_eks" {
-  for_each = var.create_eks_user_cluster ? toset(["enabled"]) : toset([])
-
-  description              = "From admin cluster nodes to user cluster eks"
-  type                     = "ingress"
-  source_security_group_id = module.eks_admin_cluster.node_security_group_id
-  from_port                = 443
-  to_port                  = 443
-  security_group_id        = module.eks_user_cluster["this"].cluster_security_group_id
-  protocol                 = "tcp"
-}
-
 # creates IAM role for ebs-csi-controller
 module "ebs_csi_irsa_role_eks_user_cluster" {
   for_each = var.create_eks_user_cluster ? toset(["this"]) : toset([])
