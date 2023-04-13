@@ -53,7 +53,6 @@ kubectl config current-context
 kubectl apply -f manifests/consul-namespace.yaml
 kubectl apply -f manifests/consul-license.yaml
 kubectl apply -f manifests/consul-bootstrap-token.yaml
-kubectl apply --kustomize "github.com/hashicorp/consul-api-gateway/config/crd?ref=v0.5.3"
 
 helm install consul hashicorp/consul -n consul --values manifests/consul-admin-cluster-values-v1.0.6.yaml --version=1.0.6
 kubectl wait --for=condition=ready pod --all --namespace consul --timeout=120s
@@ -61,6 +60,9 @@ kubectl get all -n consul
 ```
 ### 4) Copy Secrets and prepare to user cluster
 ```
+export EKS_ADMIN_CLUSTER_CONTEXT=$(terraform output -raw eks_admin_cluster_kube_context)
+export EKS_USER_CLUSTER_CONTEXT=$(terraform output -raw eks_user_cluster_kube_context)
+
 kubectl config use-context $EKS_ADMIN_CLUSTER_CONTEXT
 kubectl config current-context
 kubectl --context $EKS_USER_CLUSTER_CONTEXT apply -f manifests/consul-namespace.yaml
@@ -72,7 +74,6 @@ kubectl config use-context $EKS_USER_CLUSTER_CONTEXT
 kubectl config current-context
 kubectl apply -f manifests/consul-license.yaml
 kubectl apply -f manifests/consul-bootstrap-token.yaml
-kubectl apply --kustomize "github.com/hashicorp/consul-api-gateway/config/crd?ref=v0.5.3"
 ```
 
 ### 6) Update consul-user-cluster-values.yaml with correct URLs
@@ -83,13 +84,14 @@ export EKS_ADMIN_CLUSTER_CONSUL_LB=$(kubectl --context $EKS_ADMIN_CLUSTER_CONTEX
 echo EKS_USER_CLUSTER_K8S_LB: $EKS_USER_CLUSTER_K8S_LB
 echo EKS_ADMIN_CLUSTER_CONSUL_LB: $EKS_ADMIN_CLUSTER_CONSUL_LB
 
-sed -e "s|<EKS_USER_CLUSTER_K8S_LB>|${EKS_USER_CLUSTER_K8S_LB}|g" -e "s|<EKS_ADMIN_CLUSTER_CONSUL_LB>|${EKS_ADMIN_CLUSTER_CONSUL_LB}|g" manifests/consul-user-cluster-values-template-v1.0.6.yaml > manifests/consul-user-cluster-values.yaml
+sed -e "s|<EKS_USER_CLUSTER_K8S_LB>|${EKS_USER_CLUSTER_K8S_LB}|g" -e "s|<EKS_ADMIN_CLUSTER_CONSUL_LB>|${EKS_ADMIN_CLUSTER_CONSUL_LB}|g" manifests/consul-user-cluster-values-template-v1.1.1.yaml > manifests/consul-user-cluster-values.yaml
 cat manifests/consul-user-cluster-values.yaml
 ```
 ### 7) Install Consul in user cluster
 ```
-helm install consul hashicorp/consul -n consul --values manifests/consul-user-cluster-values.yaml --version=1.0.6 --dry-run
-helm install consul hashicorp/consul -n consul --values manifests/consul-user-cluster-values.yaml --version=1.0.6
+helm install consul hashicorp/consul -n consul --values manifests/consul-user-cluster-values.yaml --version=1.1.1 --dry-run
+
+helm install consul hashicorp/consul -n consul --values manifests/consul-user-cluster-values.yaml --version=1.1.1
 kubectl wait --for=condition=ready pod --all --namespace consul --timeout=120s
 kubectl get all -n consul
 ```
