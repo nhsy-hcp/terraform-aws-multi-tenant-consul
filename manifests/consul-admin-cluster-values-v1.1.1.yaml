@@ -1,4 +1,3 @@
-
 global:
   name: "consul"
   tls:
@@ -14,9 +13,7 @@ global:
   enterpriseLicense:
     secretName: "license"
     secretKey: "key"
-
   enableConsulNamespaces: true
-
   acls:
     manageSystemACLs: true
     bootstrapToken:
@@ -31,9 +28,9 @@ server:
   exposeGossipAndRPCPorts: true
   replicas: 3
 
-#dns:
-#  enabled: true
-#  enableRedirection: true
+dns:
+  enabled: true
+  enableRedirection: true
 
 connectInject:
   enabled: false

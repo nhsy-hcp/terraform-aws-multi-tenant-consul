@@ -20,7 +20,6 @@ global:
     secretName: "license"
     secretKey: "key"
   enableConsulNamespaces: true
-
   acls:
     manageSystemACLs: true
     bootstrapToken:
@@ -36,21 +35,31 @@ externalServers:
   k8sAuthMethodHost: "<EKS_USER_CLUSTER_K8S_LB>"
   tlsServerName: "server.dc1.consul"
 
+# clientless dataplane mode causes an error - consul-api-gateway-server.cert-manager: error grabbing leaf certificate
 client:
   enabled: true
   join: ["<EKS_ADMIN_CLUSTER_CONSUL_LB>"]
   exposeGossipPorts: true
 
-#dns:
-#  enabled: true
-#  enableRedirection: true
+dns:
+  enabled: true
+  enableRedirection: true
 
 connectInject:
   enabled: true
 
-#apiGateway:
-#  enabled: true
-#  imageEnvoy: envoyproxy/envoy:v1.23-latest
-#  image: hashicorp/consul-api-gateway:0.5.3
-#  managedGatewayClass:
-#    useHostPorts: true
+apiGateway:
+  enabled: true
+  imageEnvoy: envoyproxy/envoy:v1.23-latest
+  #image: hashicorp/consul-api-gateway:0.5.3
+  image: hashicorppreview/consul-api-gateway:0.5-dev-b2f0fd134ce4a95f9097942cbfb73dc11c260f82
+  managedGatewayClass:
+    useHostPorts: true
+    serviceType: LoadBalancer
+    copyAnnotations:
+      service:
+        annotations: |
+          - service.beta.kubernetes.io/aws-load-balancer-name
+          - service.beta.kubernetes.io/aws-load-balancer-type
+          - service.beta.kubernetes.io/aws-load-balancer-nlb-target-type
+          - service.beta.kubernetes.io/aws-load-balancer-scheme

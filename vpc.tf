@@ -4,11 +4,21 @@ module "vpc" {
 
   name = "eks-vpc"
 
-  cidr = "10.64.0.0/16"
-  azs  = slice(data.aws_availability_zones.available.names, 0, 3)
+  cidr = var.vpc_cidr
 
-  private_subnets = ["10.64.0.0/24", "10.64.1.0/24", "10.64.2.0/24"]
-  public_subnets  = ["10.64.4.0/24", "10.64.5.0/24", "10.64.6.0/24"]
+  azs = slice(data.aws_availability_zones.available.names, 0, 3)
+
+  private_subnets = [
+    cidrsubnet(var.vpc_cidr, 8, 0),
+    cidrsubnet(var.vpc_cidr, 8, 1),
+    cidrsubnet(var.vpc_cidr, 8, 2)
+  ]
+
+  public_subnets = [
+    cidrsubnet(var.vpc_cidr, 8, 4),
+    cidrsubnet(var.vpc_cidr, 8, 5),
+    cidrsubnet(var.vpc_cidr, 8, 6)
+  ]
 
   enable_nat_gateway   = true
   single_nat_gateway   = true
