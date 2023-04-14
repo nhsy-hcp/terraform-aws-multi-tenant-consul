@@ -39,6 +39,10 @@ consul-admin-clean:
 	-@kubectl --context $(EKS_ADMIN_CLUSTER_CONTEXT) delete namespace consul
 
 consul-user-clean:
+	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete -f manifests/demo-echo-svc.yaml
+	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete -f manifests/demo-httproute.yaml
+	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete -f manifests/consul-apigw-cert.yaml
+	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete -f manifests/consul-api-gateway.yaml
 	-@helm uninstall --kube-context $(EKS_USER_CLUSTER_CONTEXT) -n consul consul
 	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete pvc -n consul -l chart=consul-helm
 	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete namespace consul
