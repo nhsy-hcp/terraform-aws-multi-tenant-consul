@@ -2,20 +2,28 @@ module "eks_user_cluster" {
   for_each = var.create_eks_user_cluster ? toset(["this"]) : toset([])
 
   source  = "terraform-aws-modules/eks/aws"
-  version = "19.12.0"
+  version = "19.13.0"
 
   cluster_name    = var.eks_user_cluster_name
   cluster_version = var.eks_k8s_version
 
-  vpc_id                         = module.vpc.vpc_id
-  subnet_ids                     = module.vpc.public_subnets
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
+
   cluster_endpoint_public_access = true
-  create_cluster_security_group  = true
-  create_node_security_group     = true
+
+  # restrict access to management ip address
+  cluster_endpoint_public_access_cidrs = [local.management_ip]
+
+  create_cluster_security_group = true
+  create_node_security_group    = true
 
   eks_managed_node_group_defaults = {
     ami_type = "AL2_x86_64"
   }
+
+  cluster_enabled_log_types              = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+  cloudwatch_log_group_retention_in_days = 1
 
   cluster_addons = {
     coredns = {

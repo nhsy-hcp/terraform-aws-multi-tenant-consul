@@ -66,7 +66,7 @@ variable "eks_user_cluster_ec2_nodes_types" {
 
 variable "ec2_nodes_capacity_type" {
   type    = string
-  default = "ON_DEMAND"
+  default = "SPOT" #"ON_DEMAND" or "SPOT"
 }
 
 variable "eks_managed_node_groups_ssh_key_pair" {

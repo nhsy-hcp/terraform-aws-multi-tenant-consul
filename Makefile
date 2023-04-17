@@ -15,18 +15,16 @@ init: fmt
 deploy: init
 	@terraform apply -auto-approve
 	@sleep 5
-	@aws eks --region $(REGION) update-kubeconfig --name $(EKS_ADMIN_CLUSTER_NAME)
-	@kubectl cluster-info
-	@aws eks --region $(REGION) update-kubeconfig --name $(EKS_USER_CLUSTER_NAME)
-	@kubectl cluster-info
+	@scripts/00-prereqs.sh
 	@kubectl config use-context $(EKS_ADMIN_CLUSTER_CONTEXT)
 	@kubectl config current-context
-	@sleep 5
 
 consul: consul-admin consul-user
 
 consul-admin:
 	@scripts/01-consul-admin-cluster-install.sh
+	@echo Pausing for admin consul cluster initialisation
+	@sleep 180
 
 consul-user:
 	@scripts/02-consul-user-cluster-install.sh
@@ -45,6 +43,7 @@ consul-user-clean:
 	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete -f manifests/consul-api-gateway.yaml
 	-@helm uninstall --kube-context $(EKS_USER_CLUSTER_CONTEXT) -n consul consul
 	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete pvc -n consul -l chart=consul-helm
+	-@sleep 30
 	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete namespace consul
 
 plan: init

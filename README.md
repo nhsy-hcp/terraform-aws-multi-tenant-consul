@@ -54,27 +54,29 @@ echo https://$(kubectl get svc --context $EKS_ADMIN_CLUSTER_CONTEXT -n consul co
 ```
 Consul logon token `61f69a27-028d-ad76-e4e5-b538334caf3e`
 
-### Install API gateway and the Service
+### Install API gateway and TLS cert
 ```
 ./scripts/03-consul-user-cluster-apigw-install.sh
 ```
 Check the UI and add required intentions (Go Partitions>part1 Namespaces>consul Services>api-gateway)
 
-### Install demo echo pod
+### Install demo echoserver
 ```
 ./scripts/04-consul-user-cluster-demo-install.sh
 ```
 
-### Discovering the API GW ELB
+### Discovering the API Gateway ELB
+```
 echo https://$(kubectl --context $EKS_USER_CLUSTER_CONTEXT get svc -n consul api-gateway --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+```
 
 ## Testing
 ### Shell setup
 Use the following example to export environment variables and execute `kubectl` cli commands
 ```
 source .env
-kubecl --cluster $EKS_ADMIN_CLUSTER_CONTEXT get pods
-kubecl --cluster $EKS_USER_CLUSTER_CONTEXT get pods
+kubectl --context $EKS_ADMIN_CLUSTER_CONTEXT get pods
+kubectl --context $EKS_USER_CLUSTER_CONTEXT get pods
 ```
 
 ## Cleanup
@@ -85,4 +87,17 @@ make destroy
 ### Uninstall consul only
 ```
 make consul-clean
+```
+
+## Troubleshooting
+### CloudWatch EKS Control Plane logs
+Logging has been enabled as per the documentation below
+https://docs.aws.amazon.com/eks/latest/userguide/control-plane-logs.html
+
+### Demo echo server
+```
+kubectl create deployment hello-minikube --image=k8s.gcr.io/echoserver:1.4 --port=8080 --replicas=3
+kubectl expose deployment hello-minikube --type=LoadBalancer
+kubectl get pods
+kubectl get svc
 ```
