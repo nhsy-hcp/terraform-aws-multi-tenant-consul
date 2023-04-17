@@ -1,93 +1,88 @@
+# terraform-aws-multi-tenant-consul
 A lab setup for experimenting with Consul partitions on AWS EKS.
 
-The setup includes:
-- one VPC
-- two EKS clusters (admin cluster, user cluster)
-- non-primary partition (part1)
+The follow AWS resources are deployed:
+- 1x VPC
+- 2x EKS clusters (admin cluster, user cluster)
+- 1x primary partition (default) on admin cluster
+- 1x non-primary partition (part1) on user cluster
 
 ## Pre-Requisites
-### 1) Test your AWS CLI credentials:
+### Setup and test your AWS CLI credentials:
 ```
 aws sts get-caller-identity
 ```
-### 2) Add licence 
+### Add licence 
 Copy manifests/consul-license-template.yaml to manifests/consul-license.yaml and add license.
 ```
 cp manifests/consul-license-template.yaml manifests/consul-license.yaml
 ```
 Replace <LICENSE_BASE64_ENCODED> with base64 encoded license
 
-### 3) Add AWS Account ID 
+### Add AWS Account ID 
 Copy terraform.tfvars.example to terraform.tfvars
 ```
 cp terraform.tfvars.example terraform.tfvars
 ```
 Replace <AWS_ACCOUNT_ID> with AWS account ID.
 
-## Fully automated install #TODO
-### 1) Create EKS admin + user clusters and install consul:
+## Automated install
+### Create EKS admin + user clusters and install consul:
 ```
 make all
 ```
 Continue user cluster consul installation from step 4) Copy Secrets and prepare to user cluster.
 
-## Partially automated
-### 1) Create EKS admin + user clusters 
+## Step by Step install
+### Create EKS admin + user clusters 
 ```
 make deploy
 ```
-### 2) Configure the kubernetes contexts:
+### Install consul on admin cluster
 ```
-aws eks --region $(terraform output -raw region) update-kubeconfig --name $(terraform output -raw eks_admin_cluster_name)
-aws eks --region $(terraform output -raw region) update-kubeconfig --name $(terraform output -raw eks_user_cluster_name)
-
-export EKS_ADMIN_CLUSTER_CONTEXT=$(terraform output -raw eks_admin_cluster_kube_context)
-export EKS_USER_CLUSTER_CONTEXT=$(terraform output -raw eks_user_cluster_kube_context)
+make consul-admin
 ```
 
-### 3) Install Consul on EKS admin cluster
+### Install consul on user cluster
 ```
-./scripts/consul-admin-cluster-install.sh
-```
-### 4) Install Consul on EKS user cluster
-```
-./scripts/consul-user-cluster-install.sh
+make consul-user
 ```
 
-### 5) Discover Admin Cluster Consul UI URL
+### Discover Admin Cluster Consul UI URL
 ```
 echo https://$(kubectl get svc --context $EKS_ADMIN_CLUSTER_CONTEXT -n consul consul-ui --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-
 ```
-Don't forget to log in using the supplied bootstrap token
-`61f69a27-028d-ad76-e4e5-b538334caf3e`
+Consul logon token `61f69a27-028d-ad76-e4e5-b538334caf3e`
 
-### 6) Install API gateway and the Service #TODO
+### Install API gateway and the Service
 ```
-./scripts/consul-user-cluster-apigw-install.sh
+./scripts/03-consul-user-cluster-apigw-install.sh
 ```
-
 Check the UI and add required intentions (Go Partitions>part1 Namespaces>consul Services>api-gateway)
 
-### 7) Discovering the API GW ELB #TODO
+### Install demo echo pod
+```
+./scripts/04-consul-user-cluster-demo-install.sh
+```
+
+### Discovering the API GW ELB
 echo https://$(kubectl --context $EKS_USER_CLUSTER_CONTEXT get svc -n consul api-gateway --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
+## Testing
+### Shell setup
+Use the following example to export environment variables and execute `kubectl` cli commands
+```
+source .env
+kubecl --cluster $EKS_ADMIN_CLUSTER_CONTEXT get pods
+kubecl --cluster $EKS_USER_CLUSTER_CONTEXT get pods
+```
+
 ## Cleanup
-### Fully Automated
+### Automated destroy
 ```
 make destroy
 ```
-### Manual #TODO
+### Uninstall consul only
 ```
-kubectl config use-context $CLUSTER_B_CONTEXT
-kubectl delete -f example-echo-svc.yaml
-kubectl delete -f consul-apigw-cert.yaml 
-kubectl delete -f api-gateway.yaml
-kubectlk delete -f httproute.yaml
-
-helm uninstall consul -n consul
-kubectl config use-context $CLUSTER_A_CONTEXT
-helm uninstall consul -n consul
-kubectl delete pvc -n consul -l chart=consul-helm
-terraform destroy
+make consul-clean
 ```
