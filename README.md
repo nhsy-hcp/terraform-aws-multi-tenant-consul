@@ -10,6 +10,11 @@ The follow AWS resources are deployed:
 - AWS Load Balancer Controller - installed on admin and user clusters, required for Consul API Gateway
 - CloudWatch Logging - Useful EKS debugging
 
+All EC2 instances are Spot to keep costs down.
+
+If deploying a large number of pods then remember this is limited by the EC2 instance size.
+You can use the script `./scripts/max-pods-calculator.sh` to calculate max pods.
+
 ## Pre-Requisites
 ### Setup and test your AWS CLI credentials:
 ```

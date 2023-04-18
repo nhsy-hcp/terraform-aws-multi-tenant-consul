@@ -33,7 +33,7 @@ consul-user:
 
 consul-user-apigw:
 	@scripts/03-consul-user-cluster-apigw-install.sh
-	@echo Pausing for user cluster API GW initialisation
+	@echo Pausing for user cluster API Gateway initialisation
 	@sleep 180
 	@scripts/04-consul-user-cluster-demo-install.sh
 
