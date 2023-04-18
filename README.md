@@ -3,9 +3,12 @@ A lab setup for experimenting with Consul partitions on AWS EKS.
 
 The follow AWS resources are deployed:
 - 1x VPC
-- 2x EKS clusters (admin cluster, user cluster)
+- 2x EKS clusters (admin cluster, user cluster) - addons installed Amazon EBS CSI Driver, Amazon VPC CNI
 - 1x primary partition (default) on admin cluster
 - 1x non-primary partition (part1) on user cluster
+- Security groups - required for Consul intra cluster communications
+- AWS Load Balancer Controller - installed on admin and user clusters, required for Consul API Gateway
+- CloudWatch Logging - Useful EKS debugging
 
 ## Pre-Requisites
 ### Setup and test your AWS CLI credentials:
@@ -48,26 +51,9 @@ make consul-admin
 make consul-user
 ```
 
-### Discover Admin Cluster Consul UI URL
+### Install API gateway and demo
 ```
-echo https://$(kubectl get svc --context $EKS_ADMIN_CLUSTER_CONTEXT -n consul consul-ui --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-```
-Consul logon token `61f69a27-028d-ad76-e4e5-b538334caf3e`
-
-### Install API gateway and TLS cert
-```
-./scripts/03-consul-user-cluster-apigw-install.sh
-```
-Check the UI and add required intentions (Go Partitions>part1 Namespaces>consul Services>api-gateway)
-
-### Install demo echoserver
-```
-./scripts/04-consul-user-cluster-demo-install.sh
-```
-
-### Discovering the API Gateway ELB
-```
-echo https://$(kubectl --context $EKS_USER_CLUSTER_CONTEXT get svc -n consul api-gateway --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+make consul-user-apigw
 ```
 
 ## Testing
@@ -100,4 +86,9 @@ kubectl create deployment hello-minikube --image=k8s.gcr.io/echoserver:1.4 --por
 kubectl expose deployment hello-minikube --type=LoadBalancer
 kubectl get pods
 kubectl get svc
+```
+
+### Curl testing echo server
+```
+kubectl --context $EKS_USER_CLUSTER_CONTEXT run curltesting --image=curlimages/curl --restart=Never --command -ti --rm -- curl -kv --connect-timeout 5 http://[SVC IP]:8080
 ```

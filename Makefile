@@ -1,4 +1,4 @@
-.PHONY: all init deploy plan consul consul-admin consul-user consul-clean consul-admin-clean consul-user-clean destroy fmt clean
+.PHONY: all init deploy plan consul consul-admin consul-user consul-user-apigw consul-clean consul-admin-clean consul-user-clean destroy fmt clean
 
 EKS_ADMIN_CLUSTER_NAME=`terraform output -raw eks_admin_cluster_name`
 EKS_USER_CLUSTER_NAME=`terraform output -raw eks_user_cluster_name`
@@ -19,15 +19,23 @@ deploy: init
 	@kubectl config use-context $(EKS_ADMIN_CLUSTER_CONTEXT)
 	@kubectl config current-context
 
-consul: consul-admin consul-user
+consul: consul-admin consul-user consul-user-apigw
 
 consul-admin:
 	@scripts/01-consul-admin-cluster-install.sh
-	@echo Pausing for admin consul cluster initialisation
+	@echo Pausing for admin cluster consul initialisation
 	@sleep 180
 
 consul-user:
 	@scripts/02-consul-user-cluster-install.sh
+	@echo Pausing for user cluster consul initialisation
+	@sleep 180
+
+consul-user-apigw:
+	@scripts/03-consul-user-cluster-apigw-install.sh
+	@echo Pausing for user cluster API GW initialisation
+	@sleep 180
+	@scripts/04-consul-user-cluster-demo-install.sh
 
 consul-clean: consul-user-clean consul-admin-clean
 

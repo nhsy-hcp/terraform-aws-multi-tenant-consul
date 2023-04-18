@@ -40,3 +40,9 @@ ui:
   service:
     enabled: true
     type: LoadBalancer
+    annotations: | # required for AWS Load Balancer Controller
+      service.beta.kubernetes.io/aws-load-balancer-name: "eks-admin-ui"
+      service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      #service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"

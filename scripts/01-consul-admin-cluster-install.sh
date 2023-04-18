@@ -16,15 +16,25 @@ helm install consul hashicorp/consul -n consul --values manifests/consul-admin-c
 helm install consul hashicorp/consul -n consul --values manifests/consul-admin-cluster-values-v1.1.1.yaml --version=1.1.1 #--dry-run
 kubectl wait --for=condition=ready pod --all --namespace consul --timeout=120s
 kubectl get all -n consul
+echo
 
-CONSUL_UI_URL=https://$(kubectl get svc --context $EKS_ADMIN_CLUSTER_CONTEXT -n consul consul-ui --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+CONSUL_UI_LB=$(kubectl get svc --context $EKS_ADMIN_CLUSTER_CONTEXT -n consul consul-ui --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+while [[ "${CONSUL_UI_LB}" == "" ]]; do
+  echo Waiting for Consul UI LB
+  CONSUL_UI_LB=$(kubectl get svc --context $EKS_ADMIN_CLUSTER_CONTEXT -n consul consul-ui --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+  sleep 10
+done
+
+CONSUL_UI_URL=https://$CONSUL_UI_LB
+
 echo
 echo  Consul UI: $CONSUL_UI_URL
 echo
 
 while [[ "$(curl -sIko /dev/null -w '%{http_code}' --connect-timeout 5 $CONSUL_UI_URL)" != "301" ]]; do
-  echo Checking $CONSUL_UI_URL
-  sleep 10
+  echo Checking Consul UI ready...
+  sleep 20
 done
 
 echo
