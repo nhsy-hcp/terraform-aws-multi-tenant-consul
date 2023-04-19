@@ -1,4 +1,5 @@
-.PHONY: all init deploy plan consul consul-admin consul-user consul-user-apigw consul-clean consul-admin-clean consul-user-clean destroy fmt clean
+.PHONY: all init deploy plan destroy fmt clean
+.PHONY: consul consul-admin consul-user consul-user-apigw consul-clean consul-admin-clean consul-user-clean consul-user-redeploy
 
 EKS_ADMIN_CLUSTER_NAME=`terraform output -raw eks_admin_cluster_name`
 EKS_USER_CLUSTER_NAME=`terraform output -raw eks_user_cluster_name`
@@ -51,8 +52,11 @@ consul-user-clean:
 	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete -f manifests/consul-api-gateway.yaml
 	-@helm uninstall --kube-context $(EKS_USER_CLUSTER_CONTEXT) -n consul consul
 	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete pvc -n consul -l chart=consul-helm
-	-@sleep 30
 	-@kubectl --context $(EKS_USER_CLUSTER_CONTEXT) delete namespace consul
+	-@echo Pausing for user cluster consul cleanup
+	-@sleep 180
+
+consul-user-redeploy: consul-user-clean consul-user consul-user-apigw
 
 plan: init
 	@terraform validate

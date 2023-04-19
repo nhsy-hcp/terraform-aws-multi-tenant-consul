@@ -11,11 +11,17 @@ kubectl apply -f manifests/consul-apigw-cert.yaml
 kubectl apply -f manifests/consul-api-gateway.yaml
 
 ## Wait for API Gateway service
-APIGW_SVC=$(kubectl get svc api-gateway --context $EKS_USER_CLUSTER_CONTEXT -n consul)
+kubectl wait --context $EKS_USER_CLUSTER_CONTEXT -n consul --for=condition=ready gateway/api-gateway --timeout=90s
 
-while [[ "${APIGW_SVC}" == "" ]]; do
-  echo Waiting for Consul API Gateway service
-  APIGW_SVC=$(kubectl get svc api-gateway --context $EKS_USER_CLUSTER_CONTEXT -n consul)
+# Wait for API Gateway pod
+kubectl wait --context $EKS_USER_CLUSTER_CONTEXT -n consul --for=condition=ready pod -l api-gateway.consul.hashicorp.com/name=api-gateway --timeout=90s
+
+# Wait for API Gateway LB
+APIGW_LB=$(kubectl get svc --context $EKS_USER_CLUSTER_CONTEXT -n consul api-gateway --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+while [[ "${APIGW_LB}" == "" ]]; do
+  echo Waiting for Consul UI LB
+  APIGW_LB=$(kubectl get svc --context $EKS_USER_CLUSTER_CONTEXT -n consul api-gateway --output jsonpath='{.status.loadBalancer.ingress[0].hostname}')
   sleep 10
 done
 
